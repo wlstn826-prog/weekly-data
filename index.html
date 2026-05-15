@@ -23,111 +23,15 @@
     </div>
 
     <!-- 필터 -->
-    <div class="bg-white rounded-3xl p-5 shadow mb-6 grid grid-cols-2 gap-4">
+    <div class="bg-white rounded-3xl p-5 shadow mb-6 space-y-4">
         <div>
             <p class="text-xs text-gray-500 mb-1">드라이버 (H열)</p>
             <select id="driver-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm"></select>
         </div>
         <div>
-            <p class="text-xs text-gray-500 mb-1">날짜 (B열)</p>
-            <select id="date-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm"></select>
+            <p class="text-xs text-gray-500 mb-1">날짜 선택 (달력)</p>
+            <input type="date" id="date-select" onchange="filterSales()" 
+                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
         </div>
     </div>
 
-    <!-- 판매 내역 -->
-    <div id="sales-list" class="bg-white rounded-3xl shadow"></div>
-</div>
-
-<script>
-const SHEET_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=92272147";
-
-let allRows = [];
-
-async function loadData() {
-    try {
-        const res = await fetch(SHEET_URL);
-        const text = await res.text();
-        const json = JSON.parse(text.substring(47).slice(0, -2));
-        allRows = json.table.rows;
-
-        populateFilters();
-        filterSales();
-    } catch(e) {
-        document.getElementById('sales-list').innerHTML = `<p class="text-red-500 p-12 text-center">데이터 불러오기 실패</p>`;
-    }
-}
-
-function populateFilters() {
-    const drivers = new Set();
-    const dates = new Set();
-
-    allRows.forEach(row => {
-        if (row.c) {
-            if (row.c[7] && row.c[7].v) drivers.add(row.c[7].v);   // H열 = 드라이버
-            if (row.c[1] && row.c[1].v) dates.add(row.c[1].v);     // B열 = 날짜
-        }
-    });
-
-    let dHtml = '<option value="all">전체 드라이버</option>';
-    [...drivers].sort().forEach(d => dHtml += `<option value="${d}">${d}</option>`);
-    document.getElementById('driver-select').innerHTML = dHtml;
-
-    let dateHtml = '<option value="all">전체 날짜</option>';
-    [...dates].sort((a,b) => b.localeCompare(a)).forEach(d => dateHtml += `<option value="${d}">${d}</option>`);
-    document.getElementById('date-select').innerHTML = dateHtml;
-}
-
-function filterSales() {
-    const selDriver = document.getElementById('driver-select').value;
-    const selDate = document.getElementById('date-select').value;
-
-    let html = `<div class="p-5 border-b font-medium">판매 내역 목록</div>`;
-    let grandTotal = 0;
-    let itemCount = 0;
-
-    allRows.forEach(row => {
-        if (!row.c || !row.c[5]) return;
-
-        const dateVal = row.c[1] ? row.c[1].v : '';
-        const driverVal = row.c[7] ? row.c[7].v : '';
-        const product = row.c[2] ? row.c[2].v : '상품명 없음';
-        const qty = row.c[4] ? row.c[4].v : 0;
-        const amount = parseInt(row.c[5].v || 0);
-
-        if (amount <= 0) return;
-
-        const driverMatch = selDriver === "all" || driverVal === selDriver;
-        const dateMatch = selDate === "all" || dateVal === selDate;
-
-        if (driverMatch && dateMatch) {
-            grandTotal += amount;
-            itemCount++;
-
-            html += `
-                <div class="p-5 border-b flex justify-between items-start">
-                    <div class="flex-1">
-                        <div class="font-medium">${product}</div>
-                        <div class="text-sm text-gray-500">${qty}개</div>
-                    </div>
-                    <div class="text-right font-bold text-lg">${amount.toLocaleString()}원</div>
-                </div>`;
-        }
-    });
-
-    if (itemCount === 0) {
-        html += `<div class="p-12 text-center text-gray-400">선택한 조건에 맞는 판매 내역이 없습니다.</div>`;
-    } else {
-        html += `
-            <div class="p-6 bg-teal-50 rounded-b-3xl flex justify-between items-center">
-                <span class="font-medium">총 ${itemCount}건</span>
-                <span class="text-2xl font-bold">${grandTotal.toLocaleString()}원</span>
-            </div>`;
-    }
-
-    document.getElementById('sales-list').innerHTML = html;
-}
-
-window.onload = loadData;
-</script>
-</body>
-</html>
