@@ -105,7 +105,11 @@ function filterSales() {
     });
 
     sortedCats.forEach(cat => {
-        html += `<div class="p-4 bg-gray-50 font-medium border-b">${cat}</div>`;
+        html += `
+            <div class="px-5 py-3 bg-gray-100 font-bold text-lg border-b border-t">
+                ${cat}
+            </div>`;
+        
         categoryGroups[cat].forEach(item => {
             html += `
                 <div class="p-5 border-b flex justify-between items-start">
@@ -113,7 +117,7 @@ function filterSales() {
                         <div class="font-medium">${item.product}</div>
                         <div class="text-sm text-gray-500">${item.qty}개</div>
                     </div>
-                    <div class="font-bold">${item.amount.toLocaleString()}원</div>
+                    <div class="font-bold text-right">${item.amount.toLocaleString()}원</div>
                 </div>`;
         });
     });
