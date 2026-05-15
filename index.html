@@ -51,7 +51,7 @@
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyXe5H6TfvAY89_5CUvC4qOXosiwc_wCeZS9ued0YTvWBoGCMCji1uq52o_Ietztg6tZA/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzMRUJzWTXGXvOU1VdcEJ7TMhNoSyAfZydqgoCJJRTlrL7hwbv_1c7h_iBbYz_AXiY3TQ/exec";
 
 async function checkPassword() {
     const pw = document.getElementById('password').value.trim();
@@ -64,7 +64,10 @@ async function checkPassword() {
     }
 
     try {
-        const res = await fetch(`${SCRIPT_URL}?pw=${encodeURIComponent(pw)}`);
+        const res = await fetch(`${SCRIPT_URL}?pw=${encodeURIComponent(pw)}`, {
+          method: 'GET',
+          redirect: 'follow'   // ← 이게 핵심! GAS는 리다이렉트를 사용함
+            });
         const data = await res.json();
 
         if (data.error) {
