@@ -13,61 +13,64 @@
 </head>
 <body class="min-h-screen">
 
-<div class="max-w-2xl mx-auto p-5">
+<div class="max-w-2xl mx-auto px-5 pt-8">
     <div class="bg-teal-600 text-white p-6 rounded-3xl text-center mb-8">
+        <div class="flex justify-center mb-4">
+            <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl">🚚</div>
+        </div>
         <h1 class="text-2xl font-bold">기아 무브투유</h1>
-        <p class="text-teal-100">지난주 판매 데이터</p>
+        <p class="text-teal-100">지난주 판매 리뷰</p>
     </div>
 
-    <div id="content" class="text-center py-12">
-        <p>데이터 불러오는 중...</p>
+    <div id="content" class="text-center">
+        <p class="text-gray-400">데이터 불러오는 중...</p>
     </div>
 </div>
 
 <script>
-// 구글 시트 공개 JSON URL (3-1 탭)
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=92272147";
 
-async function loadData() {
+async function loadSalesData() {
     try {
         const res = await fetch(SHEET_URL);
         const text = await res.text();
-        
-        // Google JSON 파싱
-        const jsonStr = text.substring(47).slice(0, -2);
-        const json = JSON.parse(jsonStr);
+        const json = JSON.parse(text.substring(47).slice(0, -2));
         
         const rows = json.table.rows;
-        let totalSales = 0;
-        let itemCount = 0;
+        let total = 0;
+        let count = 0;
 
         rows.forEach(row => {
-            if (row.c && row.c[5]) {  // 판매금액 컬럼 (F열)
-                const amount = parseInt(row.c[5].v || 0);
+            if (row.c && row.c[5] && row.c[5].v) {
+                const amount = parseInt(row.c[5].v);
                 if (amount > 0) {
-                    totalSales += amount;
-                    itemCount++;
+                    total += amount;
+                    count++;
                 }
             }
         });
 
         document.getElementById('content').innerHTML = `
-            <div class="bg-white rounded-3xl p-8 shadow">
-                <p class="text-emerald-600 text-sm font-medium">지난주 총 판매</p>
-                <p class="text-6xl font-bold text-gray-800 mt-3">${Math.round(totalSales / 10000)}만원</p>
-                <p class="text-gray-500 mt-2">${itemCount}건 기록</p>
+            <div class="bg-white rounded-3xl p-10 shadow">
+                <p class="text-emerald-600 font-medium">지난주 총 판매액</p>
+                <p class="text-6xl font-bold mt-4 text-gray-800">${Math.round(total/10000)}만원</p>
+                <p class="text-gray-500 mt-2">${count}건 판매</p>
             </div>
-            <p class="text-xs text-gray-400 mt-8">데이터는 실시간으로 반영됩니다.</p>
+            
+            <div class="mt-10 text-xs text-gray-400">
+                실시간으로 업데이트 됩니다<br>
+                (3-1)판매 물품 정리 시트 기준
+            </div>
         `;
     } catch(e) {
         document.getElementById('content').innerHTML = `
-            <p class="text-red-500">데이터 불러오기 실패</p>
-            <p class="text-sm text-gray-500 mt-2">시트가 '웹에 게시' 되어 있는지 확인해주세요.</p>
+            <p class="text-red-500">데이터를 불러올 수 없습니다.</p>
+            <p class="text-sm mt-2">시트가 '웹에 게시' 되어 있는지 확인해주세요.</p>
         `;
     }
 }
 
-window.onload = loadData;
+window.onload = loadSalesData;
 </script>
 </body>
 </html>
