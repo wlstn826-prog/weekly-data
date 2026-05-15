@@ -8,8 +8,7 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background: linear-gradient(135deg, #e0f2f1 0%, #f0fdfa 100%); }
-        .tab-active { border-bottom: 4px solid #14b8a6; color: #14b8a6; font-weight: 700; }
-        .category-header { background-color: #f3f4f6; font-weight: 700; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; }
+        .category-header { background-color: #f3f4f6; font-weight: 700; padding: 14px 20px; border-bottom: 1px solid #ddd; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -20,14 +19,13 @@
             <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl">🚚</div>
         </div>
         <h1 class="text-2xl font-bold">기아 무브투유</h1>
-        <p class="text-teal-100">판매 & 운행일지 조회</p>
+        <p class="text-teal-100">판매 내역 조회</p>
     </div>
 
-    <!-- 필터 -->
     <div class="bg-white rounded-3xl p-5 shadow mb-8 grid grid-cols-2 gap-4">
         <div>
             <p class="text-xs text-gray-500 mb-1">드라이버</p>
-            <select id="driver-select" onchange="filterAll()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
+            <select id="driver-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
                 <option value="all">전체</option>
                 <option value="우정현">우정현</option>
                 <option value="양태주">양태주</option>
@@ -36,17 +34,11 @@
         </div>
         <div>
             <p class="text-xs text-gray-500 mb-1">날짜</p>
-            <input type="date" id="date-select" onchange="filterAll()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
+            <input type="date" id="date-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
         </div>
     </div>
 
-    <!-- 탭 -->
-    <div class="flex border-b mb-6">
-        <button onclick="switchTab(0)" id="tab0" class="tab-active flex-1 py-4">판매 내역</button>
-        <button onclick="switchTab(1)" id="tab1" class="flex-1 py-4 text-gray-500">운행 일지</button>
-    </div>
-
-    <div id="content" class="bg-white rounded-3xl shadow min-h-[500px]"></div>
+    <div id="sales-list" class="bg-white rounded-3xl shadow"></div>
 </div>
 
 <script>
@@ -60,29 +52,16 @@ async function loadData() {
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
         allRows = json.table.rows;
-        filterAll();
+        filterSales();
     } catch(e) {
-        document.getElementById('content').innerHTML = `<p class="text-red-500 p-12 text-center">데이터 로드 실패</p>`;
+        document.getElementById('sales-list').innerHTML = `<p class="text-red-500 p-12 text-center">데이터 로드 실패</p>`;
     }
 }
 
-function switchTab(n) {
-    document.getElementById('tab0').classList.toggle('tab-active', n === 0);
-    document.getElementById('tab1').classList.toggle('tab-active', n === 1);
-    filterAll();
-}
+function filterSales() {
+    const selDriver = document.getElementById('driver-select').value;
+    const selDate = document.getElementById('date-select').value; // YYYY-MM-DD
 
-function filterAll() {
-    const driver = document.getElementById('driver-select').value;
-    const dateInput = document.getElementById('date-select').value;
-    const isSales = document.getElementById('tab0').classList.contains('tab-active');
-
-    if (isSales) renderSales(driver, dateInput);
-    else renderLog(driver, dateInput);
-}
-
-// ==================== 판매 내역 (카테고리 그룹핑) ====================
-function renderSales(driver, dateInput) {
     let html = `<div class="p-5 border-b font-medium">판매 내역</div>`;
     let grandTotal = 0;
 
@@ -91,8 +70,8 @@ function renderSales(driver, dateInput) {
     allRows.forEach(row => {
         if (!row.c || !row.c[5]) return;
 
-        const dateStr = row.c[1] ? String(row.c[1].v) : '';
-        const rowDriver = row.c[7] ? String(row.c[7].v) : '';
+        const dateSerial = row.c[13] ? Number(row.c[13].v) : null;   // N열 (숫자)
+        const driver = row.c[7] ? String(row.c[7].v) : '';
         const category = row.c[3] ? String(row.c[3].v) : '기타';
         const product = row.c[2] ? row.c[2].v : '';
         const qty = row.c[4] ? row.c[4].v : 0;
@@ -100,14 +79,13 @@ function renderSales(driver, dateInput) {
 
         if (amount <= 0) return;
 
-        const driverMatch = driver === "all" || rowDriver === driver;
+        const driverMatch = selDriver === "all" || driver === selDriver;
 
         let dateMatch = true;
-        if (dateInput) {
-            const [y, m, d] = dateInput.split('-').map(Number);
-            const p1 = `${m}/${d}`;
-            const p2 = `${m.toString().padStart(2,'0')}/${d.toString().padStart(2,'0')}`;
-            dateMatch = dateStr.includes(p1) || dateStr.includes(p2);
+        if (selDate && dateSerial) {
+            const selected = new Date(selDate);
+            const serial = Math.floor((selected - new Date(1899, 11, 30)) / (86400000)) + 1;
+            dateMatch = Math.abs(dateSerial - serial) <= 1;   // ±1일 허용
         }
 
         if (driverMatch && dateMatch) {
@@ -117,7 +95,7 @@ function renderSales(driver, dateInput) {
         }
     });
 
-    // 카테고리 순서 강제 지정
+    // 카테고리 순서
     const priority = ['계란/두부', '계란', '두부', '채소/야채', '유제품/두유'];
     const sortedCats = Object.keys(categoryGroups).sort((a, b) => {
         const iA = priority.findIndex(p => a.includes(p));
@@ -148,11 +126,7 @@ function renderSales(driver, dateInput) {
         html += `<div class="p-6 bg-teal-50 rounded-b-3xl text-right text-2xl font-bold">${grandTotal.toLocaleString()}원</div>`;
     }
 
-    document.getElementById('content').innerHTML = html;
-}
-
-function renderLog(driver, dateInput) {
-    document.getElementById('content').innerHTML = `<div class="p-12 text-center text-gray-400">운행 일지 준비중...</div>`;
+    document.getElementById('sales-list').innerHTML = html;
 }
 
 window.onload = loadData;
