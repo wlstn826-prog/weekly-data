@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>기아 무브투유 - 지난주 리뷰</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
+        
+        body { 
+            font-family: 'Noto Sans KR', sans-serif; 
+            background: linear-gradient(135deg, #e0f2f1 0%, #f0fdfa 100%);
+        }
+        
+        .brand-teal { color: #14b8a6; }
+        .brand-bg { background-color: #14b8a6; }
+        .card { 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            box-shadow: 0 10px 15px -3px rgb(20 184 166 / 0.1);
+        }
+        .card:hover { 
+            transform: translateY(-6px); 
+            box-shadow: 0 20px 25px -5px rgb(20 184 166 / 0.15);
+        }
+        
+        .heart-icon {
+            position: relative;
+        }
+        .heart-icon::after {
+            content: '❤️';
+            position: absolute;
+            right: -8px;
+            top: -8px;
+            font-size: 18px;
+            opacity: 0.2;
+            transform: rotate(15deg);
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20">
+
+    <!-- 헤더 (브랜딩 스타일) -->
+    <div class="brand-bg text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-2xl mx-auto px-5 py-5 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 bg-white rounded-2xl flex items-center justify-center text-2xl heart-icon">🚚</div>
+                <div>
+                    <h1 class="text-2xl font-bold tracking-tight">기아 무브투유</h1>
+                    <p class="text-xs opacity-75 -mt-1">D-1 × 기아 × 소록우산</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-sm font-medium">2026. 5. 5(월) ~ 5. 11(일)</p>
+                <p class="text-xs opacity-75">지난주 리뷰</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-2xl mx-auto px-5 pt-6">
+
+        <!-- 메인 탭 -->
+        <div class="flex border-b border-teal-200 mb-6 bg-white rounded-3xl p-1 shadow">
+            <button onclick="switchMainTab(0)" id="tab0-btn"
+                    class="flex-1 py-4 rounded-3xl font-medium tab-active">요일별 특이사항</button>
+            <button onclick="switchMainTab(1)" id="tab1-btn"
+                    class="flex-1 py-4 rounded-3xl font-medium text-gray-500">저번주 같은요일 판매</button>
+        </div>
+
+        <!-- ==================== 1. 요일별 특이사항 ==================== -->
+        <div id="main-tab0">
+
+            <!-- 요일 선택 -->
+            <div class="grid grid-cols-7 gap-2 mb-8 text-center text-sm">
+                <div onclick="switchDay(0)" id="day0" class="day-tab py-3 bg-white rounded-2xl font-medium cursor-pointer border-2 border-teal-300">월</div>
+                <div onclick="switchDay(1)" id="day1" class="day-tab py-3 bg-white rounded-2xl font-medium cursor-pointer">화</div>
+                <div onclick="switchDay(2)" id="day2" class="day-tab py-3 bg-white rounded-2xl font-medium cursor-pointer">수</div>
+                <div onclick="switchDay(3)" id="day3" class="day-tab py-3 bg-white rounded-2xl font-medium cursor-pointer">목</div>
+                <div onclick="switchDay(4)" id="day4" class="day-tab py-3 bg-white rounded-2xl font-medium cursor-pointer">금</div>
+                <div onclick="switchDay(5)" id="day5" class="day-tab py-3 bg-white rounded-2xl font-medium cursor-pointer">토</div>
+                <div onclick="switchDay(6)" id="day6" class="day-tab py-3 bg-white rounded-2xl font-medium cursor-pointer">일</div>
+            </div>
+
+            <!-- 월요일 예시 -->
+            <div id="day-content">
+                <div class="mb-6 flex items-center gap-3">
+                    <div class="w-10 h-10 brand-bg text-white rounded-3xl flex items-center justify-center text-xl font-bold">05</div>
+                    <div>
+                        <div class="font-bold text-xl">월요일 · 7마을</div>
+                        <div class="text-teal-600 text-sm">안평면 3 · 사곡면 2 · 구천면 2</div>
+                    </div>
+                </div>
+
+                <div class="space-y-5">
+                    <!-- 특이사항 카드 -->
+                    <div class="card bg-white rounded-3xl p-6">
+                        <div class="flex justify-between">
+                            <span class="px-4 py-1.5 bg-orange-100 text-orange-700 text-sm font-medium rounded-2xl">특이사항</span>
+                            <span class="text-xs text-gray-400">박곡1리 · 10:20</span>
+                        </div>
+                        <div class="mt-4 text-[15px] leading-relaxed">
+                            할머니 4분이 건어물 더 다양하게 요청<br>
+                            <span class="text-teal-600 font-medium">→ 다음주 광천김, 황태채, 멸치 추가 준비</span>
+                        </div>
+                    </div>
+
+                    <!-- 컴플레인 카드 -->
+                    <div class="card bg-white rounded-3xl p-6">
+                        <div class="flex justify-between">
+                            <span class="px-4 py-1.5 bg-red-100 text-red-600 text-sm font-medium rounded-2xl">컴플레인</span>
+                            <span class="text-xs text-gray-400">양지2리 · 14:45</span>
+                        </div>
+                        <div class="mt-4 text-[15px] leading-relaxed text-red-600">
+                            냉장고 온도 높아서 아이스크림 일부 녹음<br>
+                            (사진 첨부)
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== 2. 저번주 같은요일 판매 ==================== -->
+        <div id="main-tab1" class="hidden">
+            <div class="card bg-white rounded-3xl p-8 text-center">
+                <div class="inline-flex items-center gap-2 text-teal-600 mb-2">
+                    <i class="fas fa-calendar"></i>
+                    <span class="font-medium">저번주 월요일</span>
+                </div>
+                <div class="text-6xl font-bold brand-teal mt-3">1,248</div>
+                <div class="text-xl text-gray-500">만원</div>
+                <div class="text-sm text-teal-600 mt-1">7마을 평균 178만원</div>
+            </div>
+
+            <div class="mt-8 grid grid-cols-2 gap-4">
+                <div class="card bg-white rounded-3xl p-6">
+                    <div class="text-teal-600 font-medium">건어물</div>
+                    <div class="text-4xl font-bold mt-3">487</div>
+                    <div class="text-sm text-gray-500">만원 (39%)</div>
+                </div>
+                <div class="card bg-white rounded-3xl p-6">
+                    <div class="text-teal-600 font-medium">청과</div>
+                    <div class="text-4xl font-bold mt-3">312</div>
+                    <div class="text-sm text-gray-500">만원 (25%)</div>
+                </div>
+            </div>
+
+            <div class="mt-10 text-center text-xs text-gray-400">
+                ※ 판매내역은 전체 합산입니다.<br>
+                마을별 상세 기록은 앞으로 추가 예정
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        function switchMainTab(n) {
+            document.getElementById('main-tab0').classList.toggle('hidden', n !== 0);
+            document.getElementById('main-tab1').classList.toggle('hidden', n !== 1);
+            
+            document.getElementById('tab0-btn').classList.toggle('bg-white', n === 0);
+            document.getElementById('tab0-btn').classList.toggle('shadow', n === 0);
+            document.getElementById('tab1-btn').classList.toggle('bg-white', n === 1);
+            document.getElementById('tab1-btn').classList.toggle('shadow', n === 1);
+        }
+
+        function switchDay(d) {
+            document.querySelectorAll('.day-tab').forEach((el, i) => {
+                if (i === d) {
+                    el.classList.add('border-2', 'border-teal-300', 'bg-white');
+                } else {
+                    el.classList.remove('border-2', 'border-teal-300', 'bg-white');
+                }
+            });
+            console.log('요일 선택:', ['월','화','수','목','금','토','일'][d]);
+        }
+
+        window.onload = () => {
+            switchDay(0);
+        };
+    </script>
+</body>
+</html>
