@@ -59,59 +59,75 @@ async function loadData() {
 
 function filterSales() {
     const selDriver = document.getElementById('driver-select').value;
-    const selDate = document.getElementById('date-select').value;   // YYYY-MM-DD
+    const selDate = document.getElementById('date-select').value;
 
     let html = `<div class="p-5 border-b font-medium">판매 내역</div>`;
     let grandTotal = 0;
-    let itemCount = 0;
+
+    // 카테고리별 그룹핑
+    const categoryGroups = {};
 
     allRows.forEach(row => {
         if (!row.c || !row.c[5]) return;
 
-        const dateStr = row.c[1] ? String(row.c[1].v) : '';     // B열
-        const driver  = row.c[7] ? String(row.c[7].v) : '';     // H열
+        const dateStr = row.c[1] ? String(row.c[1].v) : '';
+        const driver = row.c[7] ? String(row.c[7].v) : '';
+        const category = row.c[3] ? String(row.c[3].v) : '기타';   // D열 = 카테고리
         const product = row.c[2] ? row.c[2].v : '상품명 없음';
-        const qty     = row.c[4] ? row.c[4].v : 0;
-        const amount  = parseInt(row.c[5].v || 0);
+        const qty = row.c[4] ? row.c[4].v : 0;
+        const amount = parseInt(row.c[5].v || 0);
 
         if (amount <= 0) return;
 
+        // 드라이버 필터
         const driverMatch = selDriver === "all" || driver === selDriver;
 
-        // 날짜 매칭 강화
+        // 날짜 필터 (더 강력하게)
         let dateMatch = true;
         if (selDate) {
-            const [year, month, day] = selDate.split('-').map(Number);
-            const patterns = [
-                `${month}/${day}`,           // 5/6
-                `${month.toString().padStart(2,'0')}/${day.toString().padStart(2,'0')}`, // 05/06
-                `${year}-${month}-${day}`,   // 2026-05-06
-                `${year}.${month}.${day}`    // 2026.5.6
-            ];
+            const [y, m, d] = selDate.split('-').map(Number);
+            const patterns = [`${m}/${d}`, `${m.toString().padStart(2,'0')}/${d.toString().padStart(2,'0')}`];
             dateMatch = patterns.some(p => dateStr.includes(p));
         }
 
         if (driverMatch && dateMatch) {
+            if (!categoryGroups[category]) categoryGroups[category] = [];
+            categoryGroups[category].push({product, qty, amount});
             grandTotal += amount;
-            itemCount++;
-
-            html += `
-                <div class="p-5 border-b flex justify-between items-start">
-                    <div class="flex-1">
-                        <div class="font-medium">${product}</div>
-                        <div class="text-sm text-gray-500">${qty}개</div>
-                    </div>
-                    <div class="font-bold text-right">${amount.toLocaleString()}원</div>
-                </div>`;
         }
     });
 
-    if (itemCount === 0) {
-        html += `<div class="p-12 text-center text-gray-400">선택한 드라이버와 날짜에 맞는 판매 내역이 없습니다.</div>`;
+    // 지정된 카테고리 순서
+    const order = ['계란/두부', '계란', '두부', '채소/야채', '유제품/두유'];
+    const sortedCategories = Object.keys(categoryGroups).sort((a, b) => {
+        const idxA = order.findIndex(o => a.includes(o));
+        const idxB = order.findIndex(o => b.includes(o));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    sortedCategories.forEach(cat => {
+        html += `<div class="p-4 bg-gray-50 font-medium border-b">${cat}</div>`;
+        categoryGroups[cat].forEach(item => {
+            html += `
+                <div class="p-5 border-b flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="font-medium">${item.product}</div>
+                        <div class="text-sm text-gray-500">${item.qty}개</div>
+                    </div>
+                    <div class="font-bold">${item.amount.toLocaleString()}원</div>
+                </div>`;
+        });
+    });
+
+    if (sortedCategories.length === 0) {
+        html += `<div class="p-12 text-center text-gray-400">조건에 맞는 판매 내역이 없습니다.</div>`;
     } else {
         html += `
             <div class="p-6 bg-teal-50 rounded-b-3xl flex justify-between text-xl font-bold">
-                <span>총 ${itemCount}건</span>
+                <span>총계</span>
                 <span>${grandTotal.toLocaleString()}원</span>
             </div>`;
     }
