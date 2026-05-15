@@ -3,11 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>기아 무브투유 - 판매 내역</title>
+    <title>기아 무브투유</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background: linear-gradient(135deg, #e0f2f1 0%, #f0fdfa 100%); }
+        .brand-teal { color: #14b8a6; }
+        .tab-active { border-bottom: 3px solid #14b8a6; color: #14b8a6; font-weight: 700; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -18,13 +20,14 @@
             <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl">🚚</div>
         </div>
         <h1 class="text-2xl font-bold">기아 무브투유</h1>
-        <p class="text-teal-100">판매 내역 조회</p>
+        <p class="text-teal-100">판매 & 운행일지 조회</p>
     </div>
 
+    <!-- 필터 -->
     <div class="bg-white rounded-3xl p-5 shadow mb-6 grid grid-cols-2 gap-4">
         <div>
             <p class="text-xs text-gray-500 mb-1">드라이버</p>
-            <select id="driver-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-base">
+            <select id="driver-select" onchange="filterAll()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
                 <option value="all">전체</option>
                 <option value="우정현">우정현</option>
                 <option value="양태주">양태주</option>
@@ -33,36 +36,129 @@
         </div>
         <div>
             <p class="text-xs text-gray-500 mb-1">날짜</p>
-            <input type="date" id="date-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-base">
+            <input type="date" id="date-select" onchange="filterAll()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
         </div>
     </div>
 
-    <div id="sales-list" class="bg-white rounded-3xl shadow min-h-[400px] p-5"></div>
+    <!-- 탭 -->
+    <div class="flex border-b mb-6">
+        <button onclick="switchTab(0)" id="tab0" class="tab-active flex-1 py-3">판매 내역</button>
+        <button onclick="switchTab(1)" id="tab1" class="flex-1 py-3 text-gray-500">운행 일지</button>
+    </div>
+
+    <div id="content" class="bg-white rounded-3xl shadow min-h-[400px]"></div>
 </div>
 
 <script>
-function filterSales() {
+const SALES_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=92272147";
+const LOG_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=0"; // 운행일지 탭 gid (필요시 변경)
+
+let salesRows = [], logRows = [];
+
+async function loadData() {
+    try {
+        const [sRes, lRes] = await Promise.all([fetch(SALES_URL), fetch(LOG_URL)]);
+        salesRows = JSON.parse((await sRes.text()).substring(47).slice(0,-2)).table.rows;
+        logRows = JSON.parse((await lRes.text()).substring(47).slice(0,-2)).table.rows;
+        filterAll();
+    } catch(e) {
+        document.getElementById('content').innerHTML = `<p class="text-red-500 p-12 text-center">데이터 로드 실패</p>`;
+    }
+}
+
+function switchTab(n) {
+    document.getElementById('tab0').classList.toggle('tab-active', n === 0);
+    document.getElementById('tab1').classList.toggle('tab-active', n === 1);
+    filterAll();
+}
+
+function filterAll() {
     const driver = document.getElementById('driver-select').value;
     const dateInput = document.getElementById('date-select').value;
     
-    let html = `<div class="text-center py-10">`;
+    const isSalesTab = document.getElementById('tab0').classList.contains('tab-active');
     
-    if (driver === "all" && !dateInput) {
-        html += `<p class="text-gray-400">드라이버와 날짜를 선택해주세요</p>`;
-    } else {
-        html += `
-            <p class="text-lg font-medium">${driver === "all" ? "전체" : driver} 드라이버</p>
-            <p class="text-sm text-gray-500">${dateInput || "전체 날짜"}</p>
-            <p class="mt-8 text-2xl font-bold text-teal-600">데이터 불러오는 중...</p>
-        `;
-    }
-    
-    html += `</div>`;
-    document.getElementById('sales-list').innerHTML = html;
+    if (isSalesTab) renderSales(driver, dateInput);
+    else renderLog(driver, dateInput);
 }
 
-// 페이지 로드
-window.onload = filterSales;
+// ==================== 판매 내역 ====================
+function renderSales(driver, dateInput) {
+    let html = `<div class="p-5 border-b font-medium">판매 내역</div>`;
+    let total = 0, count = 0;
+
+    salesRows.forEach(row => {
+        if (!row.c || !row.c[5]) return;
+        const rowDate = row.c[1] ? String(row.c[1].v) : '';
+        const rowDriver = row.c[7] ? String(row.c[7].v) : '';
+        const product = row.c[2] ? row.c[2].v : '';
+        const qty = row.c[4] ? row.c[4].v : 0;
+        const amount = parseInt(row.c[5].v || 0);
+
+        if (amount <= 0) return;
+
+        const driverMatch = driver === "all" || rowDriver === driver;
+        let dateMatch = true;
+        if (dateInput) {
+            const [y,m,d] = dateInput.split('-');
+            dateMatch = rowDate.includes(`${parseInt(m)}/${parseInt(d)}`);
+        }
+
+        if (driverMatch && dateMatch) {
+            total += amount;
+            count++;
+            html += `
+                <div class="p-5 border-b flex justify-between">
+                    <div>
+                        <div class="font-medium">${product}</div>
+                        <div class="text-sm text-gray-500">${qty}개</div>
+                    </div>
+                    <div class="font-bold">${amount.toLocaleString()}원</div>
+                </div>`;
+        }
+    });
+
+    html += `<div class="p-6 bg-teal-50 rounded-b-3xl text-right font-bold text-xl">${total.toLocaleString()}원</div>`;
+    document.getElementById('content').innerHTML = html;
+}
+
+// ==================== 운행 일지 ====================
+function renderLog(driver, dateInput) {
+    let html = `<div class="p-5 border-b font-medium">운행 일지</div>`;
+    let found = 0;
+
+    logRows.forEach(row => {
+        if (!row.c) return;
+        const rowDate = row.c[1] ? String(row.c[1].v) : '';
+        const rowDriver = row.c[2] ? String(row.c[2].v) : '';
+
+        const driverMatch = driver === "all" || rowDriver === driver;
+        let dateMatch = true;
+        if (dateInput) dateMatch = rowDate.includes(dateInput.replace(/-/g, '.'));
+
+        if (driverMatch && dateMatch) {
+            found++;
+            html += `
+                <div class="p-5 border-b">
+                    <div class="font-medium">${row.c[4]?.v || ''}</div>
+                    <div class="text-sm text-gray-500">${row.c[3]?.v || ''} · ${row.c[7]?.v || ''}</div>
+                    <div class="grid grid-cols-2 gap-4 mt-3 text-sm">
+                        <div>상주인원: ${row.c[5]?.v || 0}</div>
+                        <div>마트고객: ${row.c[6]?.v || 0}</div>
+                    </div>
+                    ${row.c[8]?.v ? `<div class="mt-2 text-orange-600">요청: ${row.c[8].v}</div>` : ''}
+                    ${row.c[9]?.v ? `<div class="text-red-600">품절: ${row.c[9].v}</div>` : ''}
+                    ${row.c[10]?.v ? `<div class="text-teal-600">참고: ${row.c[10].v}</div>` : ''}
+                </div>`;
+        }
+    });
+
+    if (found === 0) html += `<div class="p-12 text-center text-gray-400">해당 조건의 운행일지가 없습니다.</div>`;
+
+    document.getElementById('content').innerHTML = html;
+}
+
+window.onload = loadData;
 </script>
 </body>
 </html>
