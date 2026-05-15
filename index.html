@@ -63,13 +63,15 @@ function filterSales() {
 
     let html = `<div class="p-5 border-b font-medium">판매 내역</div>`;
     let grandTotal = 0;
-    let itemCount = 0;
+
+    const categoryGroups = {};
 
     allRows.forEach(row => {
         if (!row.c || !row.c[5]) return;
 
-        const dateSerial = row.c[13] ? row.c[13].v : null;   // N열 (숫자)
+        const dateStr = row.c[1] ? String(row.c[1].v) : '';
         const driver = row.c[7] ? String(row.c[7].v) : '';
+        const category = row.c[3] ? String(row.c[3].v) : '기타';
         const product = row.c[2] ? row.c[2].v : '상품명 없음';
         const qty = row.c[4] ? row.c[4].v : 0;
         const amount = parseInt(row.c[5].v || 0);
@@ -77,42 +79,20 @@ function filterSales() {
         if (amount <= 0) return;
 
         const driverMatch = selDriver === "all" || driver === selDriver;
-
         let dateMatch = true;
-        if (selDate && dateSerial) {
-            const selectedSerial = Math.floor((new Date(selDate) - new Date(1899, 11, 30)) / (1000 * 3600 * 24)) + 1;
-            dateMatch = Math.abs(dateSerial - selectedSerial) < 2;   // ±1일 오차 허용
+        if (selDate) {
+            const [y, m, d] = selDate.split('-').map(Number);
+            const patterns = [`${m}/${d}`, `${m.toString().padStart(2,'0')}/${d.toString().padStart(2,'0')}`];
+            dateMatch = patterns.some(p => dateStr.includes(p));
         }
 
         if (driverMatch && dateMatch) {
+            if (!categoryGroups[category]) categoryGroups[category] = [];
+            categoryGroups[category].push({product, qty, amount});
             grandTotal += amount;
-            itemCount++;
-
-            html += `
-                <div class="p-5 border-b flex justify-between items-start">
-                    <div class="flex-1">
-                        <div class="font-medium">${product}</div>
-                        <div class="text-sm text-gray-500">${qty}개</div>
-                    </div>
-                    <div class="font-bold text-right">${amount.toLocaleString()}원</div>
-                </div>`;
         }
     });
 
-    if (itemCount === 0) {
-        html += `<div class="p-12 text-center text-gray-400">조건에 맞는 판매 내역이 없습니다.</div>`;
-    } else {
-        html += `
-            <div class="p-6 bg-teal-50 rounded-b-3xl flex justify-between text-xl font-bold">
-                <span>총 ${itemCount}건</span>
-                <span>${grandTotal.toLocaleString()}원</span>
-            </div>`;
-    }
-
-    document.getElementById('sales-list').innerHTML = html;
-}
-
-window.onload = loadData;
-</script>
-</body>
-</html>
+    // 카테고리 순서 지정
+    const priority = ['계란/두부', '계란', '두부', '채소/야채', '유제품/두유'];
+    const sortedCats =
