@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>기아 무브투유</title>
+    <title>기아 무브투유 - 판매 내역</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
@@ -21,7 +21,6 @@
         <p class="text-teal-100">판매 내역 조회</p>
     </div>
 
-    <!-- 필터 -->
     <div class="bg-white rounded-3xl p-5 shadow mb-6 grid grid-cols-2 gap-4">
         <div>
             <p class="text-xs text-gray-500 mb-1">드라이버</p>
@@ -34,35 +33,36 @@
         </div>
         <div>
             <p class="text-xs text-gray-500 mb-1">날짜</p>
-            <input type="date" id="date-select" onchange="filterSales()" 
-                   class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-base">
+            <input type="date" id="date-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-base">
         </div>
     </div>
 
-    <div id="sales-list" class="bg-white rounded-3xl shadow min-h-[300px]"></div>
+    <div id="sales-list" class="bg-white rounded-3xl shadow min-h-[400px] p-5"></div>
 </div>
 
 <script>
-async function filterSales() {
+function filterSales() {
     const driver = document.getElementById('driver-select').value;
     const dateInput = document.getElementById('date-select').value;
     
-    let html = `<div class="p-6 text-center text-gray-400">`;
+    let html = `<div class="text-center py-10">`;
     
     if (driver === "all" && !dateInput) {
-        html += `드라이버와 날짜를 선택해주세요`;
+        html += `<p class="text-gray-400">드라이버와 날짜를 선택해주세요</p>`;
     } else {
-        html += `${driver} 드라이버<br>${dateInput || '전체 날짜'}<br><br><span class="text-2xl">데이터 불러오는 중...</span>`;
+        html += `
+            <p class="text-lg font-medium">${driver === "all" ? "전체" : driver} 드라이버</p>
+            <p class="text-sm text-gray-500">${dateInput || "전체 날짜"}</p>
+            <p class="mt-8 text-2xl font-bold text-teal-600">데이터 불러오는 중...</p>
+        `;
     }
     
     html += `</div>`;
     document.getElementById('sales-list').innerHTML = html;
 }
 
-// 페이지 로드 시 기본 실행
-window.onload = () => {
-    filterSales();
-};
+// 페이지 로드
+window.onload = filterSales;
 </script>
 </body>
 </html>
