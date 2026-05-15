@@ -9,12 +9,12 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background: linear-gradient(135deg, #e0f2f1 0%, #f0fdfa 100%); }
         .tab-active { border-bottom: 4px solid #14b8a6; color: #14b8a6; font-weight: 700; }
+        .category-header { background-color: #f3f4f6; font-weight: 700; padding: 12px 20px; border-bottom: 1px solid #e5e7eb; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
 
 <div class="max-w-2xl mx-auto px-5 pt-8">
-    <!-- 헤더 -->
     <div class="bg-teal-600 text-white p-6 rounded-3xl text-center mb-8">
         <div class="flex justify-center mb-4">
             <div class="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center text-4xl">🚚</div>
@@ -50,16 +50,16 @@
 </div>
 
 <script>
-const SALES_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=92272147";
-const LOG_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=0";
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=92272147";
 
-let salesRows = [], logRows = [];
+let allRows = [];
 
 async function loadData() {
     try {
-        const [sRes, lRes] = await Promise.all([fetch(SALES_URL), fetch(LOG_URL)]);
-        salesRows = JSON.parse((await sRes.text()).substring(47).slice(0,-2)).table.rows;
-        logRows = JSON.parse((await lRes.text()).substring(47).slice(0,-2)).table.rows;
+        const res = await fetch(SHEET_URL);
+        const text = await res.text();
+        const json = JSON.parse(text.substring(47).slice(0, -2));
+        allRows = json.table.rows;
         filterAll();
     } catch(e) {
         document.getElementById('content').innerHTML = `<p class="text-red-500 p-12 text-center">데이터 로드 실패</p>`;
@@ -75,9 +75,9 @@ function switchTab(n) {
 function filterAll() {
     const driver = document.getElementById('driver-select').value;
     const dateInput = document.getElementById('date-select').value;
-    const isSalesTab = document.getElementById('tab0').classList.contains('tab-active');
+    const isSales = document.getElementById('tab0').classList.contains('tab-active');
 
-    if (isSalesTab) renderSales(driver, dateInput);
+    if (isSales) renderSales(driver, dateInput);
     else renderLog(driver, dateInput);
 }
 
@@ -88,7 +88,7 @@ function renderSales(driver, dateInput) {
 
     const categoryGroups = {};
 
-    salesRows.forEach(row => {
+    allRows.forEach(row => {
         if (!row.c || !row.c[5]) return;
 
         const dateStr = row.c[1] ? String(row.c[1].v) : '';
@@ -101,11 +101,13 @@ function renderSales(driver, dateInput) {
         if (amount <= 0) return;
 
         const driverMatch = driver === "all" || rowDriver === driver;
+
         let dateMatch = true;
         if (dateInput) {
             const [y, m, d] = dateInput.split('-').map(Number);
-            const patterns = [`${m}/${d}`, `${m.toString().padStart(2,'0')}/${d.toString().padStart(2,'0')}`];
-            dateMatch = patterns.some(p => dateStr.includes(p));
+            const p1 = `${m}/${d}`;
+            const p2 = `${m.toString().padStart(2,'0')}/${d.toString().padStart(2,'0')}`;
+            dateMatch = dateStr.includes(p1) || dateStr.includes(p2);
         }
 
         if (driverMatch && dateMatch) {
@@ -115,9 +117,9 @@ function renderSales(driver, dateInput) {
         }
     });
 
-    // 카테고리 순서
+    // 카테고리 순서 강제 지정
     const priority = ['계란/두부', '계란', '두부', '채소/야채', '유제품/두유'];
-    const sortedCats = Object.keys(categoryGroups).sort((a,b) => {
+    const sortedCats = Object.keys(categoryGroups).sort((a, b) => {
         const iA = priority.findIndex(p => a.includes(p));
         const iB = priority.findIndex(p => b.includes(p));
         if (iA !== -1 && iB !== -1) return iA - iB;
@@ -127,10 +129,10 @@ function renderSales(driver, dateInput) {
     });
 
     sortedCats.forEach(cat => {
-        html += `<div class="px-5 py-4 bg-gray-100 font-bold text-lg border-b">${cat}</div>`;
+        html += `<div class="category-header">${cat}</div>`;
         categoryGroups[cat].forEach(item => {
             html += `
-                <div class="p-5 border-b flex justify-between">
+                <div class="p-5 border-b flex justify-between items-start">
                     <div class="flex-1">
                         <div class="font-medium">${item.product}</div>
                         <div class="text-sm text-gray-500">${item.qty}개</div>
@@ -140,46 +142,17 @@ function renderSales(driver, dateInput) {
         });
     });
 
-    if (sortedCats.length === 0) html += `<div class="p-12 text-center text-gray-400">조건에 맞는 판매 내역이 없습니다.</div>`;
-    else html += `<div class="p-6 bg-teal-50 rounded-b-3xl text-right text-2xl font-bold">${grandTotal.toLocaleString()}원</div>`;
+    if (sortedCats.length === 0) {
+        html += `<div class="p-12 text-center text-gray-400">조건에 맞는 판매 내역이 없습니다.</div>`;
+    } else {
+        html += `<div class="p-6 bg-teal-50 rounded-b-3xl text-right text-2xl font-bold">${grandTotal.toLocaleString()}원</div>`;
+    }
 
     document.getElementById('content').innerHTML = html;
 }
 
-// ==================== 운행 일지 ====================
 function renderLog(driver, dateInput) {
-    let html = `<div class="p-5 border-b font-medium">운행 일지</div>`;
-    let found = 0;
-
-    logRows.forEach(row => {
-        if (!row.c) return;
-        const rowDate = row.c[1] ? String(row.c[1].v) : '';
-        const rowDriver = row.c[2] ? String(row.c[2].v) : '';
-
-        const driverMatch = driver === "all" || rowDriver === driver;
-        let dateMatch = true;
-        if (dateInput) dateMatch = rowDate.includes(dateInput.replace(/-/g, '.'));
-
-        if (driverMatch && dateMatch) {
-            found++;
-            html += `
-                <div class="p-5 border-b">
-                    <div class="font-medium">${row.c[4]?.v || ''}</div>
-                    <div class="text-sm text-gray-500">${row.c[3]?.v || ''} · ${row.c[7]?.v || ''}</div>
-                    <div class="grid grid-cols-2 gap-4 mt-3 text-sm">
-                        <div>상주인원: ${row.c[5]?.v || 0}</div>
-                        <div>마트고객: ${row.c[6]?.v || 0}</div>
-                    </div>
-                    ${row.c[8]?.v ? `<div class="mt-2 text-orange-600">요청: ${row.c[8].v}</div>` : ''}
-                    ${row.c[9]?.v ? `<div class="text-red-600">품절: ${row.c[9].v}</div>` : ''}
-                    ${row.c[10]?.v ? `<div class="text-teal-600">참고: ${row.c[10].v}</div>` : ''}
-                </div>`;
-        }
-    });
-
-    if (found === 0) html += `<div class="p-12 text-center text-gray-400">조건에 맞는 운행일지가 없습니다.</div>`;
-
-    document.getElementById('content').innerHTML = html;
+    document.getElementById('content').innerHTML = `<div class="p-12 text-center text-gray-400">운행 일지 준비중...</div>`;
 }
 
 window.onload = loadData;
