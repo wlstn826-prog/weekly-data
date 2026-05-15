@@ -95,4 +95,43 @@ function filterSales() {
 
     // 카테고리 순서 지정
     const priority = ['계란/두부', '계란', '두부', '채소/야채', '유제품/두유'];
-    const sortedCats =
+    const sortedCats = Object.keys(categoryGroups).sort((a, b) => {
+        const idxA = priority.findIndex(p => a.includes(p));
+        const idxB = priority.findIndex(p => b.includes(p));
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+    });
+
+    sortedCats.forEach(cat => {
+        html += `<div class="p-4 bg-gray-50 font-medium border-b">${cat}</div>`;
+        categoryGroups[cat].forEach(item => {
+            html += `
+                <div class="p-5 border-b flex justify-between items-start">
+                    <div class="flex-1">
+                        <div class="font-medium">${item.product}</div>
+                        <div class="text-sm text-gray-500">${item.qty}개</div>
+                    </div>
+                    <div class="font-bold">${item.amount.toLocaleString()}원</div>
+                </div>`;
+        });
+    });
+
+    if (sortedCats.length === 0) {
+        html += `<div class="p-12 text-center text-gray-400">조건에 맞는 판매 내역이 없습니다.</div>`;
+    } else {
+        html += `
+            <div class="p-6 bg-teal-50 rounded-b-3xl flex justify-between text-xl font-bold">
+                <span>총계</span>
+                <span>${grandTotal.toLocaleString()}원</span>
+            </div>`;
+    }
+
+    document.getElementById('sales-list').innerHTML = html;
+}
+
+window.onload = loadData;
+</script>
+</body>
+</html>
