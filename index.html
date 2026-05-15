@@ -9,8 +9,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background: linear-gradient(135deg, #e0f2f1 0%, #f0fdfa 100%); }
         .brand-teal { color: #14b8a6; }
-        .day-tab { transition: all 0.2s; }
-        .day-tab.active { background-color: #14b8a6; color: white; }
     </style>
 </head>
 <body class="min-h-screen pb-12">
@@ -24,8 +22,32 @@
         <p class="text-teal-100">지난주 판매 리뷰</p>
     </div>
 
-    <!-- 요일 선택 -->
-    <div class="grid grid-cols-7 gap-2 mb-8" id="day-tabs"></div>
+    <!-- 필터 영역 -->
+    <div class="bg-white rounded-3xl p-5 shadow mb-6">
+        <div class="grid grid-cols-2 gap-4">
+            <!-- 드라이버 선택 -->
+            <div>
+                <p class="text-xs text-gray-500 mb-1">드라이버</p>
+                <select id="driver-select" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
+                    <option value="all">전체 드라이버</option>
+                </select>
+            </div>
+            <!-- 요일 선택 -->
+            <div>
+                <p class="text-xs text-gray-500 mb-1">요일</p>
+                <select id="day-select" onchange="filterData()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-sm">
+                    <option value="all">전체 요일</option>
+                    <option value="월">월요일</option>
+                    <option value="화">화요일</option>
+                    <option value="수">수요일</option>
+                    <option value="목">목요일</option>
+                    <option value="금">금요일</option>
+                    <option value="토">토요일</option>
+                    <option value="일">일요일</option>
+                </select>
+            </div>
+        </div>
+    </div>
 
     <div id="content" class="bg-white rounded-3xl p-6 shadow"></div>
 </div>
@@ -33,70 +55,71 @@
 <script>
 const SHEET_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=92272147";
 
-const days = ['월','화','수','목','금','토','일'];
+let allData = [];
 
-async function loadAndRender() {
+async function loadData() {
     try {
         const res = await fetch(SHEET_URL);
         const text = await res.text();
         const json = JSON.parse(text.substring(47).slice(0, -2));
-        const rows = json.table.rows;
+        allData = json.table.rows;
 
-        // 날짜 파싱 및 요일별 그룹핑
-        const salesByDay = { '월':[], '화':[], '수':[], '목':[], '금':[], '토':[], '일':[] };
-
-        rows.forEach(row => {
-            if (!row.c || !row.c[0]) return;
-            const dateStr = row.c[0].v;           // B열: 날짜 (예: 3/9(월))
-            const amount = row.c[5] ? parseInt(row.c[5].v || 0) : 0;
-
-            if (amount > 0 && dateStr) {
-                const dayChar = dateStr.match(/[월화수목금토일]/);
-                if (dayChar) {
-                    const day = dayChar[0];
-                    salesByDay[day].push(amount);
-                }
-            }
-        });
-
-        renderDayTabs(salesByDay);
-        renderDay('월', salesByDay);   // 기본 월요일
-
+        renderDriverOptions();
+        filterData();   // 초기 로드
     } catch(e) {
         document.getElementById('content').innerHTML = `<p class="text-red-500 text-center py-12">데이터 불러오기 실패</p>`;
     }
 }
 
-function renderDayTabs(salesByDay) {
-    let html = '';
-    days.forEach(day => {
-        const total = salesByDay[day].reduce((a,b)=>a+b, 0);
-        html += `
-            <div onclick="renderDay('${day}', ${JSON.stringify(salesByDay)})" 
-                 class="day-tab text-center py-3 bg-white rounded-2xl font-medium cursor-pointer border border-gray-200">
-                ${day}<br>
-                <span class="text-xs text-teal-600">${Math.round(total/10000)}만</span>
-            </div>`;
+function renderDriverOptions() {
+    const drivers = new Set();
+    allData.forEach(row => {
+        if (row.c && row.c[10]) {  // K열 = 드라이버 (주차 컬럼 근처)
+            drivers.add(row.c[10].v);
+        }
     });
-    document.getElementById('day-tabs').innerHTML = html;
+
+    let html = '<option value="all">전체 드라이버</option>';
+    drivers.forEach(d => {
+        html += `<option value="${d}">${d}</option>`;
+    });
+    document.getElementById('driver-select').innerHTML = html;
 }
 
-function renderDay(selectedDay, salesByDay) {
-    document.querySelectorAll('.day-tab').forEach(el => el.classList.remove('active'));
-    
-    const total = salesByDay[selectedDay].reduce((a,b)=>a+b, 0);
-    const count = salesByDay[selectedDay].length;
+function filterData() {
+    const selectedDriver = document.getElementById('driver-select').value;
+    const selectedDay = document.getElementById('day-select').value;
+
+    let total = 0;
+    let count = 0;
+
+    allData.forEach(row => {
+        if (!row.c || !row.c[5]) return;
+        const amount = parseInt(row.c[5].v || 0);
+        if (amount <= 0) return;
+
+        const dateStr = row.c[0] ? row.c[0].v : '';
+        const driver = row.c[10] ? row.c[10].v : '';
+
+        const dayMatch = !selectedDay || selectedDay === "all" || dateStr.includes(selectedDay);
+        const driverMatch = selectedDriver === "all" || driver === selectedDriver;
+
+        if (dayMatch && driverMatch) {
+            total += amount;
+            count++;
+        }
+    });
 
     document.getElementById('content').innerHTML = `
-        <div class="text-center">
-            <p class="text-teal-600 font-medium">${selectedDay}요일 판매</p>
-            <p class="text-6xl font-bold mt-3">${Math.round(total/10000)}만원</p>
-            <p class="text-gray-500">${count}건 판매</p>
+        <div class="text-center py-8">
+            <p class="text-teal-600 font-medium">필터링된 판매</p>
+            <p class="text-6xl font-bold mt-4">${Math.round(total/10000)}만원</p>
+            <p class="text-gray-500 mt-2">${count}건</p>
         </div>
     `;
 }
 
-window.onload = loadAndRender;
+window.onload = loadData;
 </script>
 </body>
 </html>
