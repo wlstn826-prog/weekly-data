@@ -5,100 +5,69 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>기아 무브투유 - 지난주 리뷰</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&display=swap');
         body { font-family: 'Noto Sans KR', sans-serif; background: linear-gradient(135deg, #e0f2f1 0%, #f0fdfa 100%); }
         .brand-teal { color: #14b8a6; }
-        .brand-bg { background-color: #14b8a6; }
-        .card { transition: all 0.3s; }
-        .card:hover { transform: translateY(-4px); }
     </style>
 </head>
-<body class="min-h-screen pb-12">
+<body class="min-h-screen">
 
-<!-- 로그인 화면 -->
-<div id="login-screen" class="min-h-screen flex items-center justify-center p-5">
-    <div class="max-w-md w-full bg-white rounded-3xl shadow-2xl p-8">
-        <div class="text-center mb-8">
-            <div class="w-20 h-20 mx-auto bg-teal-100 rounded-3xl flex items-center justify-center text-5xl mb-4">🚚</div>
-            <h1 class="text-2xl font-bold text-gray-800">기아 무브투유</h1>
-            <p class="text-teal-600 mt-1">지난주 리뷰 대시보드</p>
-        </div>
-        
-        <input type="password" id="password" 
-               class="w-full px-6 py-5 border border-gray-300 rounded-2xl text-lg focus:outline-none focus:border-teal-500"
-               placeholder="비밀번호 입력" 
-               onkeypress="if(event.key === 'Enter') checkPassword()">
-        
-        <button onclick="checkPassword()" 
-                class="mt-6 w-full brand-bg text-white font-medium py-5 rounded-2xl text-lg">
-            로그인
-        </button>
-        
-        <p id="error-msg" class="text-red-500 text-center mt-4 hidden"></p>
+<div class="max-w-2xl mx-auto p-5">
+    <div class="bg-teal-600 text-white p-6 rounded-3xl text-center mb-8">
+        <h1 class="text-2xl font-bold">기아 무브투유</h1>
+        <p class="text-teal-100">지난주 판매 데이터</p>
     </div>
-</div>
 
-<!-- 대시보드 -->
-<div id="dashboard" class="hidden">
-    <div class="brand-bg text-white p-5 text-center">
-        <h1 class="text-xl font-bold">기아 무브투유 - 지난주 리뷰</h1>
-    </div>
-    <div class="max-w-2xl mx-auto px-5 pt-6" id="content">
-        <p class="text-center py-20 text-gray-400">데이터 불러오는 중...</p>
+    <div id="content" class="text-center py-12">
+        <p>데이터 불러오는 중...</p>
     </div>
 </div>
 
 <script>
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzTqmaAAhVHaOzpAFKcR__k63JpPmlklbYgJoElhuc_VN1ABAgBlanghJu631VhhaR5Sg/exec";
+// 구글 시트 공개 JSON URL (3-1 탭)
+const SHEET_URL = "https://docs.google.com/spreadsheets/d/10uykAHPURqB0sv_yUBi4zSqiS6Z8uhRxl-pRmCcE4Ao/gviz/tq?tqx=out:json&gid=92272147";
 
-async function checkPassword() {
-    const pw = document.getElementById('password').value.trim();
-    const errorMsg = document.getElementById('error-msg');
-    
-    if (!pw) {
-        errorMsg.textContent = "비밀번호를 입력해주세요.";
-        errorMsg.classList.remove('hidden');
-        return;
-    }
-
+async function loadData() {
     try {
-        const res = await fetch(`${SCRIPT_URL}?pw=${encodeURIComponent(pw)}`, {
-          method: 'GET',
-          redirect: 'follow'   // ← 이게 핵심! GAS는 리다이렉트를 사용함
-            });
-        const data = await res.json();
+        const res = await fetch(SHEET_URL);
+        const text = await res.text();
+        
+        // Google JSON 파싱
+        const jsonStr = text.substring(47).slice(0, -2);
+        const json = JSON.parse(jsonStr);
+        
+        const rows = json.table.rows;
+        let totalSales = 0;
+        let itemCount = 0;
 
-        if (data.error) {
-            errorMsg.textContent = data.error;
-            errorMsg.classList.remove('hidden');
-        } else {
-            // 로그인 성공
-            document.getElementById('login-screen').classList.add('hidden');
-            document.getElementById('dashboard').classList.remove('hidden');
-            renderDashboard(data);
-        }
+        rows.forEach(row => {
+            if (row.c && row.c[5]) {  // 판매금액 컬럼 (F열)
+                const amount = parseInt(row.c[5].v || 0);
+                if (amount > 0) {
+                    totalSales += amount;
+                    itemCount++;
+                }
+            }
+        });
+
+        document.getElementById('content').innerHTML = `
+            <div class="bg-white rounded-3xl p-8 shadow">
+                <p class="text-emerald-600 text-sm font-medium">지난주 총 판매</p>
+                <p class="text-6xl font-bold text-gray-800 mt-3">${Math.round(totalSales / 10000)}만원</p>
+                <p class="text-gray-500 mt-2">${itemCount}건 기록</p>
+            </div>
+            <p class="text-xs text-gray-400 mt-8">데이터는 실시간으로 반영됩니다.</p>
+        `;
     } catch(e) {
-        errorMsg.textContent = "연결 오류가 발생했습니다.";
-        errorMsg.classList.remove('hidden');
+        document.getElementById('content').innerHTML = `
+            <p class="text-red-500">데이터 불러오기 실패</p>
+            <p class="text-sm text-gray-500 mt-2">시트가 '웹에 게시' 되어 있는지 확인해주세요.</p>
+        `;
     }
 }
 
-function renderDashboard(data) {
-    // 간단한 판매 데이터 요약 (필요시 더 확장 가능)
-    document.getElementById('content').innerHTML = `
-        <div class="card bg-white rounded-3xl p-8 text-center shadow">
-            <p class="text-emerald-600 font-medium">로그인 성공</p>
-            <p class="text-5xl font-bold text-gray-800 mt-4">${data.length} 건</p>
-            <p class="text-gray-500">판매 기록 불러오기 완료</p>
-        </div>
-        <div class="mt-6 text-center text-sm text-gray-400">
-            개발 중인 화면입니다.<br>
-            요일별 특이사항 + 판매 요약은 다음 단계에서 추가하겠습니다.
-        </div>
-    `;
-}
+window.onload = loadData;
 </script>
 </body>
 </html>
