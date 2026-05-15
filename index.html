@@ -21,20 +21,14 @@
         <p class="text-teal-100">판매 내역 조회</p>
     </div>
 
-    <div class="bg-white rounded-3xl p-5 shadow mb-8 grid grid-cols-2 gap-4">
-        <div>
-            <p class="text-xs text-gray-500 mb-1">드라이버</p>
-            <select id="driver-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
-                <option value="all">전체</option>
-                <option value="우정현">우정현</option>
-                <option value="양태주">양태주</option>
-                <option value="이진수">이진수</option>
-            </select>
-        </div>
-        <div>
-            <p class="text-xs text-gray-500 mb-1">날짜</p>
-            <input type="date" id="date-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3">
-        </div>
+    <div class="bg-white rounded-3xl p-5 shadow mb-8">
+        <p class="text-xs text-gray-500 mb-1">드라이버</p>
+        <select id="driver-select" onchange="filterSales()" class="w-full border border-gray-300 rounded-2xl px-4 py-3 text-lg">
+            <option value="all">전체</option>
+            <option value="우정현">우정현</option>
+            <option value="양태주">양태주</option>
+            <option value="이진수">이진수</option>
+        </select>
     </div>
 
     <div id="sales-list" class="bg-white rounded-3xl shadow"></div>
@@ -59,7 +53,6 @@ async function loadData() {
 
 function filterSales() {
     const selDriver = document.getElementById('driver-select').value;
-    const selDate = document.getElementById('date-select').value; // YYYY-MM-DD
 
     let html = `<div class="p-5 border-b font-medium">판매 내역</div>`;
     let grandTotal = 0;
@@ -68,7 +61,6 @@ function filterSales() {
     allRows.forEach(row => {
         if (!row.c || !row.c[5]) return;
 
-        const dateStr = row.c[1] ? String(row.c[1].v) : '';
         const driver = row.c[7] ? String(row.c[7].v) : '';
         const product = row.c[2] ? row.c[2].v : '상품명 없음';
         const qty = row.c[4] ? row.c[4].v : 0;
@@ -76,25 +68,7 @@ function filterSales() {
 
         if (amount <= 0) return;
 
-        const driverMatch = selDriver === "all" || driver === selDriver;
-
-        // 날짜 매칭 — 매우 강력하게
-        let dateMatch = true;
-        if (selDate) {
-            const [year, month, day] = selDate.split('-').map(Number);
-            const mStr = month.toString();
-            const dStr = day.toString();
-            
-            const patterns = [
-                `${mStr}/${dStr}`,           // 4/23
-                `${mStr.padStart(2,'0')}/${dStr.padStart(2,'0')}`, // 04/23
-                `${mStr}.${dStr}`,           // 4.23
-                `${mStr.padStart(2,'0')}.${dStr.padStart(2,'0')}`  // 04.23
-            ];
-            dateMatch = patterns.some(p => dateStr.includes(p));
-        }
-
-        if (driverMatch && dateMatch) {
+        if (selDriver === "all" || driver === selDriver) {
             grandTotal += amount;
             itemCount++;
 
@@ -110,13 +84,9 @@ function filterSales() {
     });
 
     if (itemCount === 0) {
-        html += `<div class="p-12 text-center text-gray-400">조건에 맞는 판매 내역이 없습니다.</div>`;
+        html += `<div class="p-12 text-center text-gray-400">판매 내역이 없습니다.</div>`;
     } else {
-        html += `
-            <div class="p-6 bg-teal-50 rounded-b-3xl flex justify-between text-xl font-bold">
-                <span>총 ${itemCount}건</span>
-                <span>${grandTotal.toLocaleString()}원</span>
-            </div>`;
+        html += `<div class="p-6 bg-teal-50 rounded-b-3xl text-right text-2xl font-bold">${grandTotal.toLocaleString()}원</div>`;
     }
 
     document.getElementById('sales-list').innerHTML = html;
